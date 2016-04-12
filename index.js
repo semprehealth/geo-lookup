@@ -49,12 +49,18 @@ server.post('/logs', function (req, res, next) {
   eachSeries(
     payload.events,
     function (event, callback) {
-      var matches = ipRegex.exec(event.message);
+      var message = event.message;
+      var matches = ipRegex.exec(message);
       if (matches !== null) {
         var ip = matches[1];
-        console.log(ip);
+        getGeoLocation(ip, function (err, data) {
+          if (err) {
+            return next(err);
+          }
+          console.log(data, message);
+          callback();
+        });
       }
-      callback();
     },
     function (err) {
       if (err) {
@@ -65,6 +71,21 @@ server.post('/logs', function (req, res, next) {
     }
   );
 });
+
+function getGeoLocation (ip, callback) {
+  request
+    .post('https://www.iplocation.net/')
+    .send('query=' + ip)
+    .send('submit=IP Lookup')
+    .end(
+      function (err, lookupResponseHTML) {
+        if (err) {
+          return callback(err);
+        }
+        parseIpPage(lookupResponseHTML.text, callback);
+      }
+    );
+}
 
 function parseIpPage (html, callback) {
   var data = {};
