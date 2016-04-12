@@ -17,6 +17,7 @@
   },
   "homepage": "https://github.com/semprehealth/geo-lookup#readme",
   "dependencies": {
+    "async": "^2.0.0-rc.3",
     "jsdom": "^8.3.1",
     "restify": "^4.0.4",
     "superagent": "^1.8.3"

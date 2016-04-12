@@ -1,6 +1,7 @@
 var restify = require('restify');
 var request = require('superagent');
 var jsdom = require('jsdom');
+var eachSeries = require('async/eachSeries');
 
 
 var server = restify.createServer({
@@ -43,18 +44,26 @@ server.get('/', function (req, res, next) {
 var ipRegex = /(^(?:[0-9]{1,3}\.){3}[0-9]{1,3})/;
 server.post('/logs', function (req, res, next) {
   console.log('POST /logs');
+  res.send('ok');
   var payload = JSON.parse(req.params.payload);
-  payload.events.forEach(
-    function (event) {
+  eachSeries(
+    payload.events,
+    function (event, callback) {
       var matches = ipRegex.exec(event.message);
       if (matches !== null) {
         var ip = matches[1];
         console.log(ip);
       }
+      callback();
+    },
+    function (err) {
+      if (err) {
+        return next(err);
+      }
+      console.log('finished parsing ip locations');
+      next();
     }
   );
-  res.send('ok');
-  next();
 });
 
 function parseIpPage (html, callback) {
