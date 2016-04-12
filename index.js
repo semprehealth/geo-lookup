@@ -8,6 +8,10 @@ var server = restify.createServer({
   version: '1.0.0'
 });
 
+server.use(restify.queryParser());
+server.use(restify.bodyParser());
+
+
 server.get('/', function (req, res, next) {
   console.log('GET /');
   var ip = '12.201.135.66';
@@ -33,6 +37,24 @@ server.get('/', function (req, res, next) {
 
       }
     );
+});
+
+
+var ipRegex = /(^(?:[0-9]{1,3}\.){3}[0-9]{1,3})/;
+server.post('/logs', function (req, res, next) {
+  console.log('POST /logs');
+  var payload = JSON.parse(req.params.payload);
+  payload.events.forEach(
+    function (event) {
+      var matches = ipRegex.exec(event.message);
+      if (matches !== null) {
+        var ip = matches[1];
+        console.log(ip);
+      }
+    }
+  );
+  res.send('ok');
+  next();
 });
 
 function parseIpPage (html, callback) {
