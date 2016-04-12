@@ -13,31 +13,9 @@ server.use(restify.queryParser());
 server.use(restify.bodyParser());
 
 
-server.get('/', function (req, res, next) {
-  console.log('GET /');
-  var ip = '12.201.135.66';
-  request
-    .post('https://www.iplocation.net/')
-    .send('query=' + ip)
-    .send('submit=IP Lookup')
-    .end(
-      function (err, lookupResponseHTML) {
-        if (err) {
-          return next(err);
-        }
-
-        parseIpPage(lookupResponseHTML.text, function (err, data) {
-          if (err) {
-            return next(err);
-          }
-          res.json({
-            data: data
-          });
-          next();
-        });
-
-      }
-    );
+server.get('/health', function (req, res, next) {
+  res.json({ ok: true});
+  next();
 });
 
 
@@ -135,7 +113,7 @@ function postToSlack (data, message, callback) {
     );
 }
 
-var serverPort = process.env.SERVER_PORT || 8080;
+var serverPort = 8081;
 server.listen(serverPort, function () {
   console.log('geo-lookup server started on port ' + serverPort)
 });
