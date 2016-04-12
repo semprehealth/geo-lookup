@@ -99,7 +99,6 @@ function postToSlack (data, message, callback) {
     .post(process.env.SLACK_ENDPOINT)
     .type('json')
     .send({
-      channel: '@swaraj',
       text: text
     })
     .end(
