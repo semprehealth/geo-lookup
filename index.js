@@ -46,10 +46,12 @@ server.post('/logs', function (req, res, next) {
   console.log('POST /logs');
   res.send('ok');
   var payload = JSON.parse(req.params.payload);
+  console.log('parsing ' + payload.events.length + ' new events');
   eachSeries(
     payload.events,
     function (event, callback) {
       var message = event.message;
+      console.log('parsing message: ' + message);
       var matches = ipRegex.exec(message);
       if (matches !== null) {
         var ip = matches[1];
@@ -57,16 +59,16 @@ server.post('/logs', function (req, res, next) {
           if (err) {
             return next(err);
           }
-          console.log(data, message);
-          callback();
+          postToSlack(data, message, callback);
         });
       }
     },
     function (err) {
       if (err) {
+        console.log('Error: ', err);
         return next(err);
       }
-      console.log('finished parsing ip locations');
+      console.log('finished handling one pager logs');
       next();
     }
   );
@@ -82,6 +84,7 @@ function getGeoLocation (ip, callback) {
         if (err) {
           return callback(err);
         }
+        console.log('parsed geolocation for ip ' + ip);
         parseIpPage(lookupResponseHTML.text, callback);
       }
     );
@@ -101,9 +104,35 @@ function parseIpPage (html, callback) {
       data.city = window.$('#wrapper > section > div > div > div.col.col_8_of_12 > div:nth-child(9) > div > table > tbody:nth-child(2) > tr > td:nth-child(4)').html();
       data.isp = window.$('#wrapper > section > div > div > div.col.col_8_of_12 > div:nth-child(9) > div > table > tbody:nth-child(4) > tr > td:nth-child(1)').html();
       data.organization = window.$('#wrapper > section > div > div > div.col.col_8_of_12 > div:nth-child(9) > div > table > tbody:nth-child(4) > tr > td:nth-child(2)').html();
+      console.log('parsed ip from page: ' + JSON.stringify(data));
       callback(null, data);
     }
   });
+}
+
+function postToSlack (data, message, callback) {
+  var text = 'One Pager / Study Design accessed\n' +
+    'Region: ' + data.region + '\n' +
+    'City: ' + data.city + '\n' +
+    'ISP: ' + data.isp + '\n' +
+    'Org: ' + data.organization + '\n' +
+    'Original Message: ' + message;
+  request
+    .post(process.env.SLACK_ENDPOINT)
+    .type('json')
+    .send({
+      channel: '@swaraj',
+      text: text
+    })
+    .end(
+      function (err) {
+        if (err) {
+          return callback(err);
+        }
+        console.log('Posted message to slack');
+        callback();
+      }
+    );
 }
 
 var serverPort = process.env.SERVER_PORT || 8080;
