@@ -18,6 +18,26 @@ server.get('/health', function (req, res, next) {
   next();
 });
 
+server.get('/test', function (req, res, next) {
+  res.send('ok');
+  var ip = '192.77.239.202';
+  getGeoLocation(ip, function (err, data) {
+    if (err) {
+      console.log('Err parsing geo location: ' + err);
+      return next(err);
+    }
+    var message = 'orig message';
+    postToSlack(data, message, function (err) {
+      if (err) {
+        console.log('err posting to slack: ');
+        console.log(err);
+        return next(err);
+      }
+      next();
+    });
+  });
+});
+
 
 var ipRegex = /(^(?:[0-9]{1,3}\.){3}[0-9]{1,3})/;
 server.post('/logs', function (req, res, next) {
@@ -52,48 +72,34 @@ server.post('/logs', function (req, res, next) {
   );
 });
 
+
+
 function getGeoLocation (ip, callback) {
+  var url = 'http://ipinfo.io/' + ip + '/json';
   request
-    .post('https://www.iplocation.net/')
-    .send('query=' + ip)
-    .send('submit=IP Lookup')
+    .get(url)
     .end(
-      function (err, lookupResponseHTML) {
+      function (err, response) {
         if (err) {
+          console.log('error fetching ip info: ');
+          console.log(err);
           return callback(err);
         }
-        console.log('parsed geolocation for ip ' + ip);
-        parseIpPage(lookupResponseHTML.text, callback);
+        var data = response.body;
+        console.log('parsed info for ip ' + ip + ': ');
+        console.log(data);
+        callback (null, data);
       }
     );
 }
 
-function parseIpPage (html, callback) {
-  var data = {};
-  jsdom.env({
-    html: html,
-    scripts: ['https://cdnjs.cloudflare.com/ajax/libs/jquery/2.2.3/jquery.min.js'],
-    done: function (err, window) {
-      if (err) {
-        return callback(err);
-      }
-      data.ip = window.$('#wrapper > section > div > div > div.col.col_8_of_12 > div:nth-child(9) > div > table > tbody:nth-child(2) > tr > td:nth-child(1)').html();
-      data.region = window.$('#wrapper > section > div > div > div.col.col_8_of_12 > div:nth-child(9) > div > table > tbody:nth-child(2) > tr > td:nth-child(3)').html();
-      data.city = window.$('#wrapper > section > div > div > div.col.col_8_of_12 > div:nth-child(9) > div > table > tbody:nth-child(2) > tr > td:nth-child(4)').html();
-      data.isp = window.$('#wrapper > section > div > div > div.col.col_8_of_12 > div:nth-child(9) > div > table > tbody:nth-child(4) > tr > td:nth-child(1)').html();
-      data.organization = window.$('#wrapper > section > div > div > div.col.col_8_of_12 > div:nth-child(9) > div > table > tbody:nth-child(4) > tr > td:nth-child(2)').html();
-      console.log('parsed ip from page: ' + JSON.stringify(data));
-      callback(null, data);
-    }
-  });
-}
+
 
 function postToSlack (data, message, callback) {
   var text = 'One Pager / Study Design accessed\n' +
     'Region: ' + data.region + '\n' +
     'City: ' + data.city + '\n' +
-    'ISP: ' + data.isp + '\n' +
-    'Org: ' + data.organization + '\n' +
+    'Org: ' + data.org+ '\n' +
     'Original Message: ' + message;
   request
     .post(process.env.SLACK_ENDPOINT)
