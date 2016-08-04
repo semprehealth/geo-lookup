@@ -38,40 +38,51 @@ server.get('/test', function (req, res, next) {
   });
 });
 
-
-var ipRegex = /(^(?:[0-9]{1,3}\.){3}[0-9]{1,3})/;
-server.post('/logs', function (req, res, next) {
-  console.log('POST /logs');
+var nginxIpRegex = /^(.*) - -/;
+server.post('/sumologs', function (req, res, next) {
+  console.log('POST /sumologs');
   res.send('ok');
-  var payload = JSON.parse(req.params.payload);
-  console.log('parsing ' + payload.events.length + ' new events');
+  var logs = JSON.parse(req.body.logs);
+  console.log('parsing ' + logs.length + ' new logs');
   eachSeries(
-    payload.events,
-    function (event, callback) {
-      var message = event.message;
-      console.log('parsing message: ' + message);
-      var matches = ipRegex.exec(message);
+    logs,
+    function logHandler (log, callback) {
+      var rawMessage = log.Message;
+      var message = JSON.parse(rawMessage);
+      var nginxLog = message.log;
+      var matches = nginxIpRegex.exec(nginxLog);
       if (matches !== null) {
         var ip = matches[1];
+        console.log('parsed ip: ' + ip);
         getGeoLocation(ip, function (err, data) {
           if (err) {
-            return next(err);
+            console.log('Err parsing geo location: ' + err);
+            return callback(err);
           }
-          postToSlack(data, message, callback);
+          postToSlack(data, nginxLog, function (err) {
+            if (err) {
+              console.log('err posting to slack: ');
+              console.log(err);
+              return callback(err);
+            }
+            callback();
+          });
+
         });
+
       }
     },
-    function (err) {
+    function onLogsParsed (err) {
       if (err) {
-        console.log('Error: ', err);
+        console.log('Error handling a log: ');
+        console.log(err);
         return next(err);
       }
-      console.log('finished handling one pager logs');
+      console.log('finished handling one pager access logs');
       next();
     }
   );
 });
-
 
 
 function getGeoLocation (ip, callback) {
