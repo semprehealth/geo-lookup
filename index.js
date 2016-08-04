@@ -129,7 +129,7 @@ function postToSlack (data, message, callback) {
     );
 }
 
-var serverPort = 8081;
+var serverPort = process.env.SERVER_PORT || 8081;
 server.listen(serverPort, function () {
   console.log('geo-lookup server started on port ' + serverPort)
 });
