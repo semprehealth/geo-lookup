@@ -38,7 +38,7 @@ server.get('/test', function (req, res, next) {
   });
 });
 
-var nginxIpRegex = /^(.*) - -/;
+var nginxIpRegex = /(\d+\.\d+.\d+\.\d+), \d+\.\d+.\d+\.\d+$/;
 server.post('/sumologs', function (req, res, next) {
   console.log('POST /sumologs');
   res.send('ok');
