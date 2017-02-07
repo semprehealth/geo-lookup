@@ -38,7 +38,7 @@ server.get('/test', function (req, res, next) {
   });
 });
 
-var nginxIpRegex = /(\d+\.\d+.\d+\.\d+), \d+\.\d+.\d+\.\d+$/;
+var nginxIpRegex = /(\d+\.\d+.\d+\.\d+), \d+\.\d+.\d+\.\d+/;
 server.post('/sumologs', function (req, res, next) {
   console.log('POST /sumologs');
   res.send('ok');
@@ -48,6 +48,7 @@ server.post('/sumologs', function (req, res, next) {
     logs,
     function logHandler (log, callback) {
       var rawMessage = log.Message;
+      console.log('Raw message: ' + rawMessage);
       var message = JSON.parse(rawMessage);
       var nginxLog = message.log;
       var matches = nginxIpRegex.exec(nginxLog);
@@ -70,6 +71,8 @@ server.post('/sumologs', function (req, res, next) {
 
         });
 
+      } else {
+        console.log('No matches for log message: ' + nginxLog);
       }
     },
     function onLogsParsed (err) {
